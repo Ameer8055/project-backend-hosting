@@ -7,14 +7,30 @@ const router = express.Router();
 router.use(express.json());
 router.use(express.urlencoded({ extended: true }));
 
+const jwt=require('jsonwebtoken')
+function verifytoken(req,res,next){
+    let token=req.headers.token;
+    try{
+    if(!token) throw 'Unauthorized access';
+    else{
+        let payload=jwt.verify(token,'secretkey');
+        if(!payload) throw 'Unauthorized access';
+        next()
+    }
+}  catch(error) {
+    console.log(error);
+
+}
+}
+
 // Initialize Razorpay instance
 const razorpay = new Razorpay({
     key_id: process.env.RAZORPAY_KEY_ID,
     key_secret: process.env.RAZORPAY_KEY_SECRET,
 });
 
-// ✅ Create Order API (Frontend Calls This)
-router.post("/create-order", async (req, res) => {
+//  Create Order API 
+router.post("/create-order",verifytoken ,async (req, res) => {
     console.log("Request Body :",req.body)
     try {
         const { amount, userId } = req.body; // Amount in INR
@@ -44,8 +60,8 @@ router.post("/create-order", async (req, res) => {
     }
 });
 
-// ✅ Verify Payment API (Frontend Calls This After Payment)
-router.post("/paymentVerification", async (req, res) => {
+//  Verify Payment 
+router.post("/paymentVerification",verifytoken, async (req, res) => {
     console.log("🟢 Received Payment Verification Data:", req.body);
     try {
         const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
@@ -72,8 +88,8 @@ router.post("/paymentVerification", async (req, res) => {
     }
 });
 
-// ✅ Get User Payment History
-router.get("/my-payments/:userId", async (req, res) => {
+//  Get User Payment History
+router.get("/my-payments/:userId", verifytoken,async (req, res) => {
     try {
         const payments = await Payment.find({ userId: req.params.userId }).sort({ createdAt: -1 });
         res.json({ success: true, payments });
